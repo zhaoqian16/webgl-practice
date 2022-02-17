@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        #canvas {
+            background-color: antiquewhite;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec4 a_Position;
+        attribute float a_PointSize;
+        void main() {
+            gl_Position=a_Position;
+            gl_PointSize=a_PointSize;
+        }
+    </script>
+
+    <script id="fragmentShader" type="x-shader/v-fragment">
+        precision mediump float;
+        uniform vec4 u_PointColor;
+        void main() {
+            float dist = distance(gl_PointCoord, vec2(0.5, 0.5));
+            if (dist < 0.5) {
+                gl_FragColor=u_PointColor;
+            } else {
+                discard;
+            }
+            
+        }
+    </script>
+
+    <script type="module">
+        import { initShaders } from '../lib/utils.js';
+        // 1、获取webgl上下文
+        const canvas = document.querySelector('#canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gl = canvas.getContext('webgl');
+        // 2、初始化
+        gl.clearColor(0.0, 0.0, 0.0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        const vsSource = document.querySelector('#vertexShader').innerText;
+        const fsSource = document.querySelector('#fragmentShader').innerText;
+        
+        initShaders(gl, vsSource, fsSource);
+
+        // 获取a_Position的存储空间
+        const a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+        // 获取u_PointColor的存储空间
+        const u_PointColor = gl.getUniformLocation(gl.program, 'u_PointColor');
+        const positionArr = [{x: 0.0, y: -0.5, size: 10, color: {r: 1, g: 1, g: 0, a: 1}}];
+
+        drawPoint(positionArr);
+
+        const glCenterX = canvas.width / 2;
+        const glCenterY = canvas.height / 2;
+        canvas.addEventListener('click', function(e) {
+            const canvasX = e.offsetX;
+            const canvasY = e.offsetY;
+
+            const glX = canvasX - glCenterX;
+            let glY = canvasY - glCenterY;
+
+            glY = -glY;
+
+            const x = glX / glCenterX;
+            const y = glY / glCenterY;
+
+            const size = Math.random()*50 + 10;
+            const color = {r: 1, g: 1, b: 0, a: 1};
+
+            positionArr.push({x, y, size, color});
+            drawPoint(positionArr);
+        })
+
+        // 绘制点
+        function drawPoint(data) {
+
+            gl.clearColor(0.0, 0.0, 0.0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            const a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+            const a_PointSize = gl.getAttribLocation(gl.program, 'a_PointSize');
+            const u_PointColor = gl.getUniformLocation(gl.program, 'u_PointColor');
+            data.forEach(({x, y, size, color: {r, g, b, a}}) => {
+                gl.vertexAttrib2f(a_Position, x, y);
+                gl.vertexAttrib1f(a_PointSize, size);
+                gl.uniform4f(u_PointColor, r, g, b, a);
+                gl.drawArrays(gl.POINTS, 0, 1);
+            })
+        }
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        #canvas {
+            background: url('./images/sky.jpg');
+            background-size: cover;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec4 a_Position;
+        attribute float a_PointSize;
+        void main() {
+            gl_Position=a_Position;
+            gl_PointSize=a_PointSize;
+        }
+    </script>
+
+    <script id="fragmentShader" type="x-shader/v-fragment">
+        precision mediump float;
+        uniform vec4 u_PointColor;
+        void main() {
+            float dist = distance(gl_PointCoord, vec2(0.5, 0.5));
+            if (dist < 0.5) {
+                gl_FragColor=u_PointColor;
+            } else {
+                discard;
+            }
+            
+        }
+    </script>
+
+    <script type="module">
+        import { initShaders } from '../lib/utils.js';
+        import Compose from '../lib/Compose.js';
+        import Track from '../lib/Track.js';
+        // 1、获取webgl上下文
+        const canvas = document.querySelector('#canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gl = canvas.getContext('webgl');
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        // 2、初始化
+
+        const vsSource = document.querySelector('#vertexShader').innerText;
+        const fsSource = document.querySelector('#fragmentShader').innerText;
+        
+        initShaders(gl, vsSource, fsSource);
+
+        const stars = [];
+
+        const compose = new Compose();
+
+        // drawPoint(positionArr);
+
+        const glCenterX = canvas.width / 2;
+        const glCenterY = canvas.height / 2;
+        canvas.addEventListener('click', function(e) {
+            const canvasX = e.offsetX;
+            const canvasY = e.offsetY;
+
+            const glX = canvasX - glCenterX;
+            let glY = canvasY - glCenterY;
+
+            glY = -glY;
+
+            const x = glX / glCenterX;
+            const y = glY / glCenterY;
+
+            const size = Math.random()*50 + 10;
+            const a = Math.random();
+
+            const obj = {x, y, size, a};
+            stars.push(obj);
+            // render();
+            const track = new Track(Object.assign(obj, {
+                start: new Date(),
+                timeLen: 2000,
+                loop: true,
+                keyMap: new Map([[
+                    'a',
+                    [
+                        [500, a],
+                        [1000, 0],
+                        [1500, a],
+                    ]
+                ]])
+            }));
+            compose.add(track);
+            debugger
+        })
+
+        !(function ani() {
+            compose.update(new Date());
+            render();
+            requestAnimationFrame(ani);
+        })()
+
+        // 绘制点
+        function render() {
+
+            const a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+            const a_PointSize = gl.getAttribLocation(gl.program, 'a_PointSize');
+            const u_PointColor = gl.getUniformLocation(gl.program, 'u_PointColor');
+            stars.forEach(({x, y, size, a}) => {
+                gl.vertexAttrib2f(a_Position, x, y);
+                gl.vertexAttrib1f(a_PointSize, size);
+                const arr = new Float32Array([0.87, 0.91, 1,a]);
+                gl.uniform4fv(u_PointColor, arr);
+                gl.drawArrays(gl.POINTS, 0, 1);
+            })
+        }
+
+    </script>
+</body>
+</html>
