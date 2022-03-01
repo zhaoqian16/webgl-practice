@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12-鼠标绘制线条</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        #canvas {
+            /* background: url('./images/sky.jpg');
+            background-size: cover; */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec4 a_Attr;
+        varying float v_Alpha;
+        void main(){
+            gl_Position=vec4(a_Attr.x,a_Attr.y,0.0,1.0);
+            gl_PointSize=a_Attr.z;
+            v_Alpha=a_Attr.w;
+        }
+    </script>
+
+    <script id="fragmentShader" type="x-shader/v-fragment">
+        precision mediump float;
+        varying float v_Alpha;
+        void main() {
+            float dist = distance(gl_PointCoord, vec2(0.5, 0.5));
+            if (dist < 0.5) {
+                gl_FragColor=vec4(1,1,0,v_Alpha);;
+            } else {
+                discard;
+            }  
+        }
+    </script>
+
+    <script type="module">
+        import { initShaders, getMousePosInWebgl, glToCssPos } from '../lib/utils.js';
+        import Poly  from '../lib/Poly.js';
+        import Sky from '../lib/Sky.js';
+        import Compose from '../lib/Compose.js';
+        import Track from '../lib/Track.js';
+
+        const canvas = document.querySelector('#canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gl = canvas.getContext('webgl');
+        const vsSource = document.querySelector('#vertexShader').innerText;
+        const fsSource = document.querySelector('#fragmentShader').innerText;
+
+        initShaders(gl, vsSource, fsSource);
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        
+        let poly;
+        const sky = new Sky(gl);
+        let point;
+
+        const stars = [];
+        const compose = new Compose();
+
+        canvas.addEventListener('mousedown', (event) => {
+            if (event.button === 2) { // 右键
+                // 取消绘制
+                popVertice();
+            } else {
+                // 绘制
+                const {x, y} = getMousePosInWebgl(event, canvas);
+                if (!poly) {
+                    createPoly(x, y); 
+                } else {
+                    addVertice(x, y)
+                }
+            }
+            render();
+        })
+
+        // oncontextmenu 事件在元素中用户右击鼠标时触发并打开上下文菜单
+        canvas.oncontextmenu=function(){
+            return false
+        }
+        
+        canvas.addEventListener('mousemove', (event) => {
+            
+            const {x, y} = getMousePosInWebgl(event, canvas);
+            point=hoverPoint(x,y);
+            canvas.style.cursor=point?'pointer':'default';
+            if (poly) {
+                const obj=poly.geoData[poly.geoData.length-1]
+                obj.x=x
+                obj.y=y
+                render();
+            }
+            
+        })
+
+        !(function ani(){
+            compose.update(new Date())
+            sky.updateVertices(['x','y', 'size', 'a']);
+            render()
+            requestAnimationFrame(ani)
+        })()
+
+        function createPoly(x, y) {
+            let o1 = point ? point : {x, y, size: random(), a: 1};
+            const o2={x,y,size:random(),a:1}
+            poly=new Poly({
+                size: 4,
+                gl,
+                geoData: [o1, o2],
+                attrName: 'a_Attr',
+                types:['POINTS', 'LINE_STRIP']
+            })
+            sky.add(poly)
+        }
+
+        function popVertice() {
+            poly.geoData.pop()
+            compose.children.pop()
+            poly=null
+        }
+
+        function render() {
+            debugger
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            sky.draw();
+        }
+
+        function hoverPoint(x, y) {
+            for (const {geoData} of sky.children) {
+                for (const pointObj of geoData) {
+                    if (poly && pointObj === poly.geoData[poly.geoData.length - 1]) {
+                        continue;
+                    }
+
+                    const delta = {
+                        x: x - pointObj.x,
+                        y: y - pointObj.y,
+                    }
+                    const delta_css = glToCssPos(delta, canvas);
+                    const dist = delta_css.x * delta_css.x + delta_css.y * delta_css.y;
+                    if (dist < 100) {
+                        return pointObj;
+                    }
+                }
+            }
+            return null
+        }
+
+        function createTrack(obj) {
+            const {x, y, size, a} = obj;
+            stars.push(obj);
+            // render();
+            const track = new Track(Object.assign(obj, {
+                start: new Date(),
+                timeLen: 2000,
+                loop: true,
+                keyMap: new Map([[
+                    'a',
+                    [
+                        [500, a],
+                        [1000, 0],
+                        [1500, a],
+                    ]
+                ]])
+            }));
+            compose.add(track);
+        }
+
+        function addVertice(x, y) {
+            const {geoData}=poly
+            if(point){
+                geoData[geoData.length-1]=point
+            }
+            let obj={x,y,size:random(),a:1}
+            geoData.push(obj)
+            createTrack(obj)
+            // console.log(geoData)
+        }
+
+        function random(){
+            return Math.random()*8+3
+        }
+
+    </script>
+</body>
+</html>

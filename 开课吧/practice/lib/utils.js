@@ -30,6 +30,30 @@ function loadShader(gl, type, source) {
     return shader;
 }
 
+function getMousePosInWebgl({clientX, clientY}, canvas) {
+    const { left, top, width, height } = canvas.getBoundingClientRect();
+    const canvasX = clientX - left;
+    const canvasY = clientY - top;
+
+    const [halfWidth, halfHeight] = [width / 2, height / 2];
+    const glX = (canvasX - halfWidth) / halfWidth;
+    const glY = - (canvasY - halfHeight) / halfHeight;
+    return {
+        x: glX,
+        y: glY,
+    }
+}
+
+function glToCssPos({x, y}, {width, height}) {
+    const [halfWidth, halfHeight] = [width / 2, height / 2];
+    return {
+        x: x * halfWidth,
+        y: -y * halfHeight,
+    }
+}
+
 export {
-    initShaders
+    initShaders,
+    getMousePosInWebgl,
+    glToCssPos
 }

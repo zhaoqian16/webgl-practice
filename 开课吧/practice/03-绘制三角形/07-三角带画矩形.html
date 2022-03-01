@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>07-三角带画矩形</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        #canvas {
+            /* background: url('./images/sky.jpg');
+            background-size: cover; */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec4 a_Position;
+        void main() {
+            gl_Position=a_Position;
+            gl_PointSize=50.0;
+        }
+    </script>
+
+    <script id="fragmentShader" type="x-shader/v-fragment">
+        precision mediump float;
+        void main() {
+            gl_FragColor=vec4(1,1,0,1);
+        }
+    </script>
+
+    <script type="module">
+        import { initShaders } from '../lib/utils.js';
+
+        const canvas = document.querySelector('#canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gl = canvas.getContext('webgl');
+        const vsSource = document.querySelector('#vertexShader').innerText;
+        const fsSource = document.querySelector('#fragmentShader').innerText;
+
+        initShaders(gl, vsSource, fsSource);
+
+        const pointArr = [-0.2, 0, 0.2, 0, -0.2, 0.4, 0.2, 0.4];
+        const vertices = new Float32Array(pointArr);
+        const verticeBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, verticeBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STREAM_DRAW);
+
+        const a_position = gl.getAttribLocation(gl.program, 'a_Position');
+        gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(a_position);
+
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT)
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        // 规则
+        // 1、第一个三角形按照逆时针的方向
+        // 2、第偶数个三角形按照将上个三角形的第二条边的反方向作为第一条边，下个点作为第三点
+        // 3、第奇数个三角形按照将上个三角形的第三条边的反方向作为第一条边，下个点作为第三点
+    </script>
+</body>
+</html>

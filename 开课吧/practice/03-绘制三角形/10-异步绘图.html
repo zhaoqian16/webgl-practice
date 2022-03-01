@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>02-绘制三角带</title>
+    <title>09-异步绘图</title>
     <style>
         body {
             margin: 0;
@@ -46,8 +46,7 @@
 
         initShaders(gl, vsSource, fsSource);
 
-        // const pointArr = [0, 0.4, -0.2, 0, 0.2, 0, 0.4, 0.4, 0.6, 0.1];
-        const pointArr = [-0.2, 0, 0.2, 0, 0, 0.4, 0.4, 0.4, 0.6, 0.1];
+        const pointArr = [-0.2, 0.4];
         const vertices = new Float32Array(pointArr);
         const verticeBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, verticeBuffer);
@@ -59,12 +58,26 @@
 
         gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT)
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 5);
+        gl.drawArrays(gl.POINTS, 0, 1);
 
-        // 规则
-        // 1、第一个三角形按照逆时针的方向
-        // 2、第偶数个三角形按照将上个三角形的第二条边的反方向作为第一条边，下个点作为第三点
-        // 3、第奇数个三角形按照将上个三角形的第三条边的反方向作为第一条边，下个点作为第三点
+        setTimeout(() => {
+            pointArr.push(0, 0);
+            const vertices = new Float32Array(pointArr);
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STREAM_DRAW);
+
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.drawArrays(gl.POINTS, 0, 2);
+        }, 1000)
+
+        setTimeout(() => {
+            const vertices = new Float32Array(pointArr);
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STREAM_DRAW);
+
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.drawArrays(gl.POINTS, 0, 2);
+            gl.drawArrays(gl.LINES, 0, 2);
+        }, 2000)
+
     </script>
 </body>
 </html>
